@@ -41,16 +41,22 @@ jobs:
 
       - name: Deploy on EC2
         run: |
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'SSH'
+          set -euo pipefail
+          REMOTE="${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}"
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no "$REMOTE" << 'SSH'
             set -euo pipefail
-            cd ~/prod-automation
 
+            # Ensure docker compose exists (Amazon Linux 2023)
+            docker compose version >/dev/null 2>&1 || sudo dnf install -y docker-compose-plugin
+
+            # One-time migration cleanup: remove old container started outside compose
+            docker rm -f prod-automation 2>/dev/null || true
+
+            cd ~/prod-automation
             export IMAGE_TAG='${{ github.event.workflow_run.head_sha }}'
 
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
-            echo "=== containers ==="
             docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}'
           SSH
