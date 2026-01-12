@@ -1,0 +1,9 @@
+services:
+  web:
+    image: ghcr.io/maxime359-lang/prod-automation-lab:${IMAGE_TAG:-latest}
+    container_name: prod-automation
+    ports:
+      - "127.0.0.1:8081:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
