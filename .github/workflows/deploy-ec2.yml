@@ -1,4 +1,4 @@
-name: Deploy to EC2 (Docker Compose)
+name: Deploy to EC2 (SSM + OIDC)
 
 on:
   workflow_run:
@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: deploy-ec2
@@ -20,43 +21,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout same commit that was built
-        uses: actions/checkout@v4
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-central-1
 
-      - name: Write SSH key
-        run: |
-          install -m 700 -d ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-      - name: Copy compose to EC2
-        run: |
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p ~/prod-automation"
-          scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no \
-            docker-compose.prod.yml \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/prod-automation/docker-compose.prod.yml
-
-      - name: Deploy on EC2
+      - name: Deploy via SSM Run Command
+        env:
+          SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
-          REMOTE="${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}"
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no "$REMOTE" << 'SSH'
-            set -euo pipefail
 
-            # Ensure docker compose exists (Amazon Linux 2023)
-            docker compose version >/dev/null 2>&1 || sudo dnf install -y docker-compose-plugin
-
-            # One-time migration cleanup: remove old container started outside compose
-            docker rm -f prod-automation 2>/dev/null || true
-
-            cd ~/prod-automation
-            export IMAGE_TAG='${{ github.event.workflow_run.head_sha }}'
-
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
-
-            docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}'
-          SSH
+          aws ssm send-command \
+            --instance-ids "${{ secrets.AWS_EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy prod-automation SHA=${SHA}" \
+            --parameters commands="[
+              \"set -euo pipefail\",
+              \"mkdir -p ~/prod-automation\",
+              \"sudo dnf install -y docker-compose-plugin curl >/dev/null 2>&1 || true\",
+              \"curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/${SHA}/docker-compose.prod.yml -o ~/prod-automation/docker-compose.prod.yml\",
+              \"docker rm -f prod-automation 2>/dev/null || true\",
+              \"cd ~/prod-automation\",
+              \"export IMAGE_TAG=${SHA}\",
+              \"docker compose -f docker-compose.prod.yml pull\",
+              \"docker compose -f docker-compose.prod.yml up -d --remove-orphans\",
+              \"docker ps --format 'table {{.Names}}\\t{{.Image}}\\t{{.Ports}}\\t{{.Status}}'\"
+            ]"
