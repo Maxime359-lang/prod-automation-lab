@@ -1,6 +1,33 @@
-.venv
+# Git
+.git
+.gitignore
+
+# Python caches / tests / venv
 __pycache__/
+*.py[cod]
 .pytest_cache/
-.git/
-.github/
-*.pyc
+.coverage
+htmlcov/
+*.log
+.venv/
+venv/
+ENV/
+env/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Docs / misc (optional but keeps image build clean)
+docs/
+README.md
