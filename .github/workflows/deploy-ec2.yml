@@ -34,7 +34,7 @@ jobs:
           set -euo pipefail
 
           CMD_ID=$(aws ssm send-command \
-            --instance-ids "${{ secrets.AWS_EC2_INSTANCE_ID }}" \
+            --targets "Key=tag:SSMDeploy,Values=prod-automation" \
             --document-name "AWS-RunShellScript" \
             --comment "Deploy prod-automation SHA=${SHA}" \
             --query "Command.CommandId" \
@@ -52,7 +52,6 @@ jobs:
 
           echo "SSM CommandId: $CMD_ID"
 
-          # wait + show output in Actions logs (super ważne)
           aws ssm wait command-executed \
             --command-id "$CMD_ID" \
             --instance-id "${{ secrets.AWS_EC2_INSTANCE_ID }}"
