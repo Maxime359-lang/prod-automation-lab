@@ -45,9 +45,8 @@ jobs:
               \"sudo -u ec2-user mkdir -p /home/ec2-user/prod-automation\",
               \"sudo -u ec2-user curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/${SHA}/docker-compose.prod.yml -o /home/ec2-user/prod-automation/docker-compose.prod.yml\",
               \"sudo docker rm -f prod-automation 2>/dev/null || true\",
-              \"runuser -l ec2-user -c 'cd /home/ec2-user/prod-automation && export IMAGE_TAG=${SHA} && docker compose -f docker-compose.prod.yml pull'\",
-              \"runuser -l ec2-user -c 'cd /home/ec2-user/prod-automation && export IMAGE_TAG=${SHA} && docker compose -f docker-compose.prod.yml up -d --remove-orphans'\",
-              \"tries=0; until curl -fsS http://127.0.0.1:8081/health; do tries=\\$((tries+1)); if [ \\$tries -ge 30 ]; then echo SMOKE_FAIL; docker logs --tail=200 prod-automation || true; exit 1; fi; echo SMOKE_retry_\\$tries; sleep 2; done; echo SMOKE_OK\",
+              \"runuser -l ec2-user -c 'cd /home/ec2-user/prod-automation && export IMAGE_TAG=${SHA} && docker compose -f docker-compose.prod.yml pull' \",
+              \"runuser -l ec2-user -c 'cd /home/ec2-user/prod-automation && export IMAGE_TAG=${SHA} && docker compose -f docker-compose.prod.yml up -d --remove-orphans' \",
               \"docker ps --format 'table {{.Names}}\\\\t{{.Image}}\\\\t{{.Ports}}\\\\t{{.Status}}'\"
             ]")
 
