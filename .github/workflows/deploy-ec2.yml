@@ -47,6 +47,9 @@ jobs:
               \"sudo docker rm -f prod-automation 2>/dev/null || true\",
               \"runuser -l ec2-user -c 'cd /home/ec2-user/prod-automation && export IMAGE_TAG=${SHA} && docker compose -f docker-compose.prod.yml pull' \",
               \"runuser -l ec2-user -c 'cd /home/ec2-user/prod-automation && export IMAGE_TAG=${SHA} && docker compose -f docker-compose.prod.yml up -d --remove-orphans' \",
+              \"sudo -u ec2-user curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/${SHA}/scripts/smoke-prod-automation.sh -o /home/ec2-user/prod-automation/smoke.sh\",
+              \"sudo chmod +x /home/ec2-user/prod-automation/smoke.sh\",
+              \"bash -lc '/home/ec2-user/prod-automation/smoke.sh http://127.0.0.1:8081/health prod-automation'\",
               \"docker ps --format 'table {{.Names}}\\\\t{{.Image}}\\\\t{{.Ports}}\\\\t{{.Status}}'\"
             ]")
 
