@@ -47,8 +47,8 @@ jobs:
               \"sudo docker rm -f prod-automation 2>/dev/null || true\",
               \"runuser -l ec2-user -c 'cd /home/ec2-user/prod-automation && export IMAGE_TAG=${SHA} && docker compose -f docker-compose.prod.yml pull'\",
               \"runuser -l ec2-user -c 'cd /home/ec2-user/prod-automation && export IMAGE_TAG=${SHA} && docker compose -f docker-compose.prod.yml up -d --remove-orphans'\",
-              \\"bash -lc 'n=0; until curl -fsS http://127.0.0.1:8081/health; do n=$((n+1)); if [ $n -ge 30 ]; then echo SMOKE_FAIL; docker logs --tail=200 prod-automation || true; exit 1; fi; echo SMOKE_retry_$n; sleep 2; done; echo SMOKE_OK'\",
-              \"docker ps --format 'table {{.Names}}\\t{{.Image}}\\t{{.Ports}}\\t{{.Status}}'\"
+              \"n=0; until curl -fsS http://127.0.0.1:8081/health; do n=$((n+1)); if [ $n -ge 30 ]; then echo SMOKE_FAIL; docker logs --tail=200 prod-automation || true; exit 1; fi; echo SMOKE_retry_$n; sleep 2; done; echo SMOKE_OK\",
+              \"docker ps --format 'table {{.Names}}\\\\t{{.Image}}\\\\t{{.Ports}}\\\\t{{.Status}}'\"
             ]")
 
           echo "SSM CommandId: $CMD_ID"
@@ -60,5 +60,5 @@ jobs:
           aws ssm get-command-invocation \
             --command-id "$CMD_ID" \
             --instance-id "${{ secrets.AWS_EC2_INSTANCE_ID }}" \
-            --query "{Status:Status,Stdout:StandardOutputContent,Stderr:StandardErrorContent}" \
+            --query "{Status:Status,Stdout:StandardOutputContent,Stderr:StandardErrorContent,ResponseCode:ResponseCode}" \
             --output json
