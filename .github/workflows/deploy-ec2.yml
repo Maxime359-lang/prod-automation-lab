@@ -47,6 +47,7 @@ jobs:
               \"sudo docker rm -f prod-automation 2>/dev/null || true\",
               \"runuser -l ec2-user -c 'cd /home/ec2-user/prod-automation && export IMAGE_TAG=${SHA} && docker compose -f docker-compose.prod.yml pull'\",
               \"runuser -l ec2-user -c 'cd /home/ec2-user/prod-automation && export IMAGE_TAG=${SHA} && docker compose -f docker-compose.prod.yml up -d --remove-orphans'\",
+              \"curl -fsS http://127.0.0.1:8081/health\",
               \"docker ps --format 'table {{.Names}}\\t{{.Image}}\\t{{.Ports}}\\t{{.Status}}'\"
             ]")
 
