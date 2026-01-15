@@ -48,3 +48,8 @@ Thumbs.db
 *.tfstate
 *.tfstate.*
 crash.log
+
+*.egg-info/
+
+*.egg-info/
+repo_dump_*.txt
