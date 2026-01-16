@@ -1,70 +1,51 @@
-# Prod Automation Lab (GitHub Actions → GHCR → AWS SSM Deploy)
+# Prod Automation Lab — GitHub Actions -> GHCR -> AWS EC2 (SSM + OIDC)
 
-Minimal Python (Flask) HTTP service, built and deployed in a production-like way:
-- **CI**: tests on every push
-- **Build**: Docker build + push image to **GHCR**
-- **Deploy**: GitHub Actions assumes AWS role via **OIDC** and deploys to EC2 via **SSM Run Command**
-- **Runtime**: service bound to localhost and served via Nginx reverse proxy
+Minimal HTTP service with /health, deployed in a production-like way:
 
-## Live demo
-Replace `<EC2_IP>` with your EC2 public IPv4:
-- https://cicd-github.<EC2_IP>.nip.io/health
+- CI: tests on every push/PR
+- Build: Docker build + push to GHCR
+- Deploy: GitHub Actions assumes AWS role via OIDC and deploys via SSM Run Command
+- Runtime: container binds to localhost only and is exposed publicly via Nginx gateway (separate repo)
 
-Example:
+Live demo (current EC2 via Nginx gateway):
 - https://cicd-github.18.198.208.36.nip.io/health
 
+Note: this app guarantees /health. Root / may return 404 (expected).
+
+## Recruiter highlights
+- No SSH keys in CI: AWS OIDC -> AssumeRole -> SSM Run Command
+- Deterministic deploy: image tag == commit SHA
+- HEALTHCHECK enabled; container restarts and health visible
+- Smoke tests with retries after deploy
+- Designed to run behind a reverse proxy (ports not exposed publicly)
+
 ## Endpoints
-- `GET /health` → `{"status":"ok"}`
-- `GET /` (optional) → basic info (if implemented)
+- GET /health -> {"status":"ok"}
 
 ## Local run (venv)
-~~~bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 pytest -q
 python app/main.py
-curl -s http://localhost:8000/health
-~~~
+curl -s http://127.0.0.1:8000/health
 
-## Docker Compose (dev)
-~~~bash
+## Docker
 docker compose up --build
-curl -s http://localhost:8000/health
-~~~
+curl -s http://127.0.0.1:8000/health
 
-## Production-like Compose (EC2 behind Nginx)
-This binds the container to localhost only:
-~~~bash
-export IMAGE_TAG=<sha-or-latest>
-docker compose -f docker-compose.prod.yml up -d
-curl -s http://127.0.0.1:8081/health
-~~~
+## EC2 runtime (behind Nginx)
+The service is bound to localhost only (security):
+- 127.0.0.1:8081 -> container:8000
 
-## CI/CD (GitHub Actions)
-Workflows:
-- `ci.yml` – tests
-- `build-push.yml` – build and push image to GHCR
-- `deploy-ec2.yml` – deploy via SSM + OIDC (no SSH keys in CI)
-
-Required secrets:
-- `AWS_DEPLOY_ROLE_ARN`
-- `AWS_EC2_INSTANCE_ID`
-
-EC2 requirements:
-- Amazon Linux 2023
-- SSM agent working
-- Security Group: allow **80/443** (nginx), do not expose **8081** publicly
-- EC2 instance tagged for SSM target:
-  - `SSMDeploy=prod-automation`
-
-## Verify on EC2
-~~~bash
-docker ps
+Verify on EC2:
 curl -sS http://127.0.0.1:8081/health
-sudo tail -n 50 /var/log/nginx/error.log
-~~~
 
-## Notes
-- No secrets are stored in the repository.
-- AWS auth uses GitHub OIDC (recommended baseline).
+## CI/CD overview (GitHub Actions)
+- ci.yml: run tests
+- build-push.yml: build and push image to GHCR (latest + sha tag)
+- deploy-ec2.yml: assume role (OIDC), run SSM command, restart container, smoke test
+
+## Related repo (gateway)
+Public HTTPS entrypoint + Let's Encrypt:
+- cicd-infra-lab
