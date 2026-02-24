@@ -49,3 +49,22 @@ curl -sS http://127.0.0.1:8081/health
 ## Related repo (gateway)
 Public HTTPS entrypoint + Let's Encrypt:
 - cicd-infra-lab
+
+## Why OIDC + SSM (instead of SSH keys in CI)
+This project uses GitHub OIDC to assume an AWS role and deploy through SSM Run Command, which avoids storing long-lived SSH private keys in CI. It reduces secret management overhead and improves deploy auditability in AWS.
+
+## Verification on EC2
+Use:
+- `docker ps`
+- `curl -sS http://127.0.0.1:8081/health`
+
+## Troubleshooting
+- SSM deploy verification and diagnostics: `docs/ssm-runbook.md`
+
+## Skills mapped to Linux Admin / DevOps
+- AWS EC2 operations
+- AWS SSM and OIDC-based CI/CD
+- Docker runtime diagnostics
+- Health checks and smoke verification
+- Reverse-proxy-ready service design (localhost bind)
+

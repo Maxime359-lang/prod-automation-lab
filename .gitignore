@@ -49,11 +49,5 @@ Thumbs.db
 *.tfstate.*
 crash.log
 
-*.egg-info/
-
-*.egg-info/
-repo_dump_*.txt
-
-repo_dump_*.txt
-
+# ---- Local dumps ----
 repo_dump_*.txt
